@@ -1,61 +1,76 @@
-const cardsEl=document.querySelector("#cards"),count=document.querySelector("#count");
-let cards=JSON.parse(localStorage.getItem("atom-cards")||"[]");
+const cardsEl=document.querySelector("#cards");
+const countEl=document.querySelector("#count");
+const emptyEl=document.querySelector("#emptyState");
+const chatLog=document.querySelector("#chatLog");
+const assistantInput=document.querySelector("#assistantInput");
+let cards=readStore("atom-cards",[]);
+let chat=readStore("atom-chat",[]);
+let searchTerm="";
 let dragIndex=null;
+function readStore(key,fallback){try{const value=JSON.parse(localStorage.getItem(key)||"null");return value??fallback}catch{return fallback}}
 function save(){localStorage.setItem("atom-cards",JSON.stringify(cards));render()}
-function move(from,to){if(from===null||to===null||from===to)return;const [item]=cards.splice(from,1);cards.splice(to,0,item);save()}
+function add(title,body="待处理任务"){cards.unshift({id:makeId(),title,body,createdAt:new Date().toISOString()});save()}
+function makeId(){return Date.now().toString(36)+Math.random().toString(36).slice(2,7)}
+function move(from,to){if(from===null||to===null||from===to||from<0||to<0||from>=cards.length||to>=cards.length)return;const [item]=cards.splice(from,1);cards.splice(to,0,item);save()}
 function render(){
-  cardsEl.replaceChildren();count.textContent=cards.length+" 个卡片";
-  cards.forEach((c,i)=>{
+  cardsEl.replaceChildren();
+  const visible=cards.map((card,index)=>({card,index})).filter(x=>(x.card.title+" "+x.card.body).toLowerCase().includes(searchTerm));
+  countEl.textContent=searchTerm?visible.length+" / "+cards.length+" 个卡片":cards.length+" 个卡片";
+  emptyEl.hidden=visible.length>0;
+  visible.forEach(({card:c,index:i})=>{
     const el=document.createElement("article");el.className="card";el.draggable=true;el.dataset.index=String(i);
     const h=document.createElement("h3");h.textContent=c.title;
     const p=document.createElement("p");p.textContent=c.body;
     const actions=document.createElement("div");actions.className="card-actions";
     const edit=document.createElement("button");edit.textContent="编辑";edit.className="secondary";
     edit.onclick=()=>{const title=prompt("卡片标题",c.title);if(title===null)return;const body=prompt("卡片内容",c.body);if(body===null)return;c.title=title.trim()||"未命名卡片";c.body=body;save()};
-    const del=document.createElement("button");del.textContent="删除";del.className="danger";
-    del.onclick=()=>{cards.splice(i,1);save()};
-    actions.append(edit,del);el.append(h,p,actions);
+    const up=document.createElement("button");up.textContent="↑";up.className="icon-button";up.setAttribute("aria-label","上移");up.disabled=i===0;up.onclick=()=>move(i,i-1);
+    const down=document.createElement("button");down.textContent="↓";down.className="icon-button";down.setAttribute("aria-label","下移");down.disabled=i===cards.length-1;down.onclick=()=>move(i,i+1);
+    const del=document.createElement("button");del.textContent="删除";del.className="danger";del.onclick=()=>{cards.splice(i,1);save()};
+    actions.append(edit,up,down,del);el.append(h,p,actions);
     el.addEventListener("dragstart",e=>{dragIndex=i;el.classList.add("dragging");e.dataTransfer.effectAllowed="move"});
     el.addEventListener("dragend",()=>{dragIndex=null;el.classList.remove("dragging");cardsEl.querySelectorAll(".card").forEach(x=>x.classList.remove("drop-target"))});
     el.addEventListener("dragover",e=>{e.preventDefault();el.classList.add("drop-target")});
     el.addEventListener("dragleave",()=>el.classList.remove("drop-target"));
     el.addEventListener("drop",e=>{e.preventDefault();el.classList.remove("drop-target");move(dragIndex,i)});
-    let holdTimer=null,touchStart=null,touchDragging=false;
-    el.addEventListener("pointerdown",e=>{
-      if(e.pointerType==="mouse")return;
-      touchStart={x:e.clientX,y:e.clientY,index:i};
-      holdTimer=setTimeout(()=>{touchDragging=true;el.classList.add("touch-dragging")},320);
-    });
-    el.addEventListener("pointermove",e=>{
-      if(!touchStart)return;
-      if(!touchDragging && Math.hypot(e.clientX-touchStart.x,e.clientY-touchStart.y)>12){clearTimeout(holdTimer);return}
-      if(touchDragging){
-        e.preventDefault();
-        const target=document.elementFromPoint(e.clientX,e.clientY)?.closest(".card");
-        if(target){cardsEl.querySelectorAll(".card").forEach(x=>x.classList.remove("drop-target"));target.classList.add("drop-target")}
-      }
-    });
-    const finishTouchDrag=e=>{
-      clearTimeout(holdTimer);
-      if(touchDragging){
-        const target=document.elementFromPoint(e.clientX,e.clientY)?.closest(".card");
-        if(target)move(touchStart.index,Number(target.dataset.index));
-      }
-      touchStart=null;touchDragging=false;
-      cardsEl.querySelectorAll(".card").forEach(x=>x.classList.remove("touch-dragging","drop-target"));
-    };
-    el.addEventListener("pointerup",finishTouchDrag);
-    el.addEventListener("pointercancel",()=>{clearTimeout(holdTimer);touchStart=null;touchDragging=false;el.classList.remove("touch-dragging")});
     cardsEl.append(el);
   });
 }
-function add(title="新工作卡片",body="点击编辑你的工作内容。"){cards.unshift({title,body});save()}
-document.querySelector("#addCard").onclick=()=>add();
+function appendMessage(role,text){
+  const wrap=document.createElement("div");wrap.className="chat-message "+(role==="user"?"user-message":"assistant-message");
+  const label=document.createElement("strong");label.textContent=role==="user"?"你":"ATOM";
+  const body=document.createElement("p");body.textContent=text;
+  wrap.append(label,body);chatLog.append(wrap);chatLog.scrollTop=chatLog.scrollHeight;
+  chat.push({role,text});if(chat.length>40)chat=chat.slice(-40);
+  localStorage.setItem("atom-chat",JSON.stringify(chat));
+}
+function showHistory(){
+  chat.forEach(m=>{const wrap=document.createElement("div");wrap.className="chat-message "+(m.role==="user"?"user-message":"assistant-message");const label=document.createElement("strong");label.textContent=m.role==="user"?"你":"ATOM";const p=document.createElement("p");p.textContent=m.text;wrap.append(label,p);chatLog.append(wrap)});
+  if(chat.length)chatLog.scrollTop=chatLog.scrollHeight;
+}
+function handleCommand(raw){
+  const text=raw.trim();if(!text)return;
+  appendMessage("user",text);
+  const addMatch=text.match(/^(?:添加任务|新建任务|创建卡片|添加卡片)\s*[:：]\s*(.+)$/i);
+  if(addMatch){const title=addMatch[1].trim();add(title,"由 ATOM 助手创建 · "+new Date().toLocaleString());appendMessage("assistant","已在本机工作台创建任务卡片：“"+title+"”。");return}
+  if(/^(?:总结|汇总|我的任务|任务列表)$/i.test(text)){appendMessage("assistant",cards.length?"当前共有 "+cards.length+" 张卡片：\n"+cards.map((c,i)=>(i+1)+". "+c.title+" — "+c.body).join("\n"):"工作台目前没有卡片。你可以说“添加任务：任务名称”。");return}
+  const searchMatch=text.match(/^(?:搜索|查找)\s*[:：]?\s*(.+)$/i);
+  if(searchMatch){searchTerm=searchMatch[1].trim().toLowerCase();document.querySelector("#cardSearch").value=searchMatch[1].trim();render();appendMessage("assistant",searchTerm?"已筛选包含“"+searchMatch[1].trim()+"”的卡片。":"请输入要搜索的内容。");return}
+  if(/^(?:清除搜索|显示全部|取消筛选)$/i.test(text)){searchTerm="";document.querySelector("#cardSearch").value="";render();appendMessage("assistant","已显示全部卡片。");return}
+  if(/^(?:帮助|你会什么|指令)$/i.test(text)){appendMessage("assistant","当前本地可用指令：\n• 添加任务：任务名称\n• 搜索：关键词\n• 总结（列出所有卡片）\n• 显示全部（清除搜索）\n\n我还没有连接云端大模型，因此暂时不能进行开放式问答或自动操作其他应用。");return}
+  appendMessage("assistant","我目前运行在本地指令模式，暂时不能像云端大模型一样理解所有自然语言。你可以输入“添加任务：…”，“搜索：…”或“总结”。");
+}
+document.querySelector("#addCard").onclick=()=>{const title=prompt("卡片标题","新工作卡片");if(title)add(title.trim()||"新工作卡片","点击编辑你的工作内容。")};
 document.querySelector("#newTask").onclick=()=>{const t=prompt("任务名称");if(t)add(t,"待处理任务")};
+document.querySelector("#assistantForm").addEventListener("submit",e=>{e.preventDefault();const value=assistantInput.value;assistantInput.value="";handleCommand(value)});
+document.querySelector("#cardSearch").addEventListener("input",e=>{searchTerm=e.target.value.trim().toLowerCase();render()});
 document.querySelector("#voiceBtn").onclick=()=>{
   const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
-  if(!SR){alert("当前浏览器不支持语音识别，请使用支持语音输入的浏览器。");return}
-  const r=new SR();r.lang="zh-CN";r.onresult=e=>add("语音记录",e.results[0][0].transcript);r.start();
+  if(!SR){alert("当前浏览器不支持网页语音识别。你仍可使用键盘输入，或使用系统键盘上的语音输入。");assistantInput.focus();return}
+  const recognition=new SR();recognition.lang="zh-CN";recognition.interimResults=false;recognition.maxAlternatives=1;
+  recognition.onresult=e=>{assistantInput.value=e.results[0][0].transcript;handleCommand(assistantInput.value);assistantInput.value=""};
+  recognition.onerror=()=>appendMessage("assistant","语音识别没有成功，请检查麦克风权限或改用键盘输入。");
+  recognition.start();
 };
 if("serviceWorker"in navigator)navigator.serviceWorker.register("./service-worker.js").catch(()=>{});
-render();
+showHistory();render();

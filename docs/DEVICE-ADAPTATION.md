@@ -1,0 +1,3 @@
+# Device adaptation
+
+Both native shells currently load the same hosted PWA URL, so the Android and HarmonyOS entry points share one web application. The Android project has a GitHub Actions debug-APK workflow. The HarmonyOS ArkTS files are starter sources and must be opened, configured, compiled, and tested with a compatible DevEco Studio/HarmonyOS SDK. System-level cross-app drag/drop, fold-state-aware layouts, floating windows, accessibility automation, and background execution are not included yet.

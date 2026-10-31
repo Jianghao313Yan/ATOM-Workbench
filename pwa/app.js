@@ -94,4 +94,73 @@ document.querySelector("#backupFile").addEventListener("change",async event=>{
   finally{event.target.value=""}
 });
 
+
+let cloudClient=null,cloudUser=null;
+const cloudStatus=document.querySelector("#cloudStatus");
+const cloudMessage=document.querySelector("#cloudMessage");
+function cloudNotice(message,isError=false){cloudMessage.textContent=message;cloudMessage.classList.toggle("error",isError)}
+function setCloudStatus(message){cloudStatus.textContent=message}
+function refreshCloudButtons(){const signed=!!cloudUser;document.querySelector("#cloudUpload").disabled=!signed;document.querySelector("#cloudDownload").disabled=!signed;document.querySelector("#cloudSignOut").disabled=!signed}
+function connectCloud(){
+  const url=localStorage.getItem("atom-supabase-url");
+  const key=localStorage.getItem("atom-supabase-anon-key");
+  if(!url||!key||!window.supabase?.createClient){cloudClient=null;setCloudStatus("尚未连接云端");refreshCloudButtons();return false}
+  try{cloudClient=window.supabase.createClient(url,key);setCloudStatus("云端参数已配置");return true}
+  catch{cloudClient=null;setCloudStatus("连接参数无效");return false}
+}
+async function checkCloudSession(){
+  if(!connectCloud())return;
+  const {data,error}=await cloudClient.auth.getSession();
+  if(error){cloudNotice("读取登录状态失败："+error.message,true);return}
+  cloudUser=data.session?.user||null;setCloudStatus(cloudUser?"已登录："+cloudUser.email:"已配置，尚未登录");refreshCloudButtons();
+}
+document.querySelector("#supabaseUrl").value=localStorage.getItem("atom-supabase-url")||"";
+document.querySelector("#supabaseAnonKey").value=localStorage.getItem("atom-supabase-anon-key")||"";
+document.querySelector("#saveCloudConfig").onclick=async()=>{
+  const url=document.querySelector("#supabaseUrl").value.trim().replace(/\/$/,"");
+  const key=document.querySelector("#supabaseAnonKey").value.trim();
+  if(!/^https:\/\/[a-z0-9-]+\.supabase\.co$/i.test(url)||!key){cloudNotice("请填写有效的 Supabase Project URL 和 anon/public key。",true);return}
+  localStorage.setItem("atom-supabase-url",url);localStorage.setItem("atom-supabase-anon-key",key);
+  cloudUser=null;connectCloud();await checkCloudSession();cloudNotice("连接设置已保存在本设备。接下来注册或登录账号。");
+};
+document.querySelector("#cloudSignUp").onclick=async()=>{
+  if(!cloudClient&&!connectCloud()){cloudNotice("请先完成上方云端连接设置。",true);return}
+  const email=document.querySelector("#cloudEmail").value.trim(),password=document.querySelector("#cloudPassword").value;
+  if(!email||password.length<8){cloudNotice("请输入邮箱和至少 8 位密码。",true);return}
+  const {data,error}=await cloudClient.auth.signUp({email,password});
+  if(error){cloudNotice("注册失败："+error.message,true);return}
+  cloudUser=data.session?.user||null;refreshCloudButtons();
+  setCloudStatus(cloudUser?"已登录："+cloudUser.email:"等待邮箱验证");
+  cloudNotice(data.session?"账号已创建并登录。":"注册请求已提交；如果项目启用了邮箱验证，请先到邮箱完成验证，再回来登录。");
+};
+document.querySelector("#cloudSignIn").onclick=async()=>{
+  if(!cloudClient&&!connectCloud()){cloudNotice("请先完成上方云端连接设置。",true);return}
+  const email=document.querySelector("#cloudEmail").value.trim(),password=document.querySelector("#cloudPassword").value;
+  const {data,error}=await cloudClient.auth.signInWithPassword({email,password});
+  if(error){cloudNotice("登录失败："+error.message,true);return}
+  cloudUser=data.user;setCloudStatus("已登录："+cloudUser.email);refreshCloudButtons();cloudNotice("登录成功。你可以上传或恢复工作台数据。");
+};
+document.querySelector("#cloudSignOut").onclick=async()=>{
+  if(!cloudClient)return;const {error}=await cloudClient.auth.signOut();
+  if(error){cloudNotice("退出失败："+error.message,true);return}
+  cloudUser=null;setCloudStatus("已退出登录");refreshCloudButtons();cloudNotice("已退出当前设备的云端账号。");
+};
+document.querySelector("#cloudUpload").onclick=async()=>{
+  if(!cloudClient||!cloudUser)return;
+  if(!confirm("将本机 "+cards.length+" 张卡片上传到云端，并替换该账号当前云端备份？"))return;
+  const {error}=await cloudClient.from("atom_workspaces").upsert({user_id:cloudUser.id,cards,updated_at:new Date().toISOString()},{onConflict:"user_id"});
+  if(error){cloudNotice("上传失败："+error.message+"。请确认已执行数据库初始化 SQL。",true);return}
+  cloudNotice("上传完成。当前设备的 "+cards.length+" 张卡片已保存到该账号云端。");
+};
+document.querySelector("#cloudDownload").onclick=async()=>{
+  if(!cloudClient||!cloudUser)return;
+  const {data,error}=await cloudClient.from("atom_workspaces").select("cards,updated_at").eq("user_id",cloudUser.id).maybeSingle();
+  if(error){cloudNotice("读取云端失败："+error.message+"。请确认已执行数据库初始化 SQL。",true);return}
+  if(!data||!Array.isArray(data.cards)){cloudNotice("云端还没有备份。请先在另一台设备上传数据。");return}
+  if(!confirm("云端有 "+data.cards.length+" 张卡片（"+new Date(data.updated_at).toLocaleString()+"）。恢复会替换本机卡片，是否继续？"))return;
+  cards=data.cards.filter(c=>c&&typeof c.title==="string"&&typeof c.body==="string").map(c=>({id:c.id||makeId(),title:c.title,body:c.body,createdAt:c.createdAt||new Date().toISOString()}));
+  save();cloudNotice("恢复完成。已从云端载入 "+cards.length+" 张卡片。");
+};
+if(window.supabase?.createClient){connectCloud();checkCloudSession();}else{setCloudStatus("SDK 未加载");cloudNotice("云端 SDK 未加载；检查网络后刷新页面。",true)}
+
 showHistory();render();

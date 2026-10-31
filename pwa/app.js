@@ -20,6 +20,32 @@ function render(){
     el.addEventListener("dragover",e=>{e.preventDefault();el.classList.add("drop-target")});
     el.addEventListener("dragleave",()=>el.classList.remove("drop-target"));
     el.addEventListener("drop",e=>{e.preventDefault();el.classList.remove("drop-target");move(dragIndex,i)});
+    let holdTimer=null,touchStart=null,touchDragging=false;
+    el.addEventListener("pointerdown",e=>{
+      if(e.pointerType==="mouse")return;
+      touchStart={x:e.clientX,y:e.clientY,index:i};
+      holdTimer=setTimeout(()=>{touchDragging=true;el.classList.add("touch-dragging")},320);
+    });
+    el.addEventListener("pointermove",e=>{
+      if(!touchStart)return;
+      if(!touchDragging && Math.hypot(e.clientX-touchStart.x,e.clientY-touchStart.y)>12){clearTimeout(holdTimer);return}
+      if(touchDragging){
+        e.preventDefault();
+        const target=document.elementFromPoint(e.clientX,e.clientY)?.closest(".card");
+        if(target){cardsEl.querySelectorAll(".card").forEach(x=>x.classList.remove("drop-target"));target.classList.add("drop-target")}
+      }
+    });
+    const finishTouchDrag=e=>{
+      clearTimeout(holdTimer);
+      if(touchDragging){
+        const target=document.elementFromPoint(e.clientX,e.clientY)?.closest(".card");
+        if(target)move(touchStart.index,Number(target.dataset.index));
+      }
+      touchStart=null;touchDragging=false;
+      cardsEl.querySelectorAll(".card").forEach(x=>x.classList.remove("touch-dragging","drop-target"));
+    };
+    el.addEventListener("pointerup",finishTouchDrag);
+    el.addEventListener("pointercancel",()=>{clearTimeout(holdTimer);touchStart=null;touchDragging=false;el.classList.remove("touch-dragging")});
     cardsEl.append(el);
   });
 }

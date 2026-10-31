@@ -5,7 +5,7 @@ A phone-first personal workspace prototype for foldable devices, initially targe
 ## Current features
 - Responsive installable PWA.
 - Local card create, edit, delete, search, reorder and voice input where browser speech recognition is supported.
-- Local command assistant for adding tasks, searching cards and listing the workspace.
+- Local command assistant for adding tasks, searching cards and listing the workspace. Once the optional authenticated Edge Function is deployed and the OpenAI server secret is configured, free-form messages can be sent to the OpenAI Responses API.
 - JSON backup export/import for manual transfer.
 - Optional Supabase email/password account and **manual** per-account cloud upload/restore, protected by row-level security (RLS).
 - Android WebView wrapper and preliminary HarmonyOS ArkTS entry source.

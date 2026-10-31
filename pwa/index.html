@@ -2,12 +2,23 @@
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#10131c"><link rel="manifest" href="./manifest.json"><link rel="stylesheet" href="./styles.css">
+<meta name="theme-color" content="#10131c"><meta name="description" content="ATOM 跨设备个人工作台原型">
+<link rel="manifest" href="./manifest.json"><link rel="stylesheet" href="./styles.css">
 <title>ATOM Workbench</title>
 </head>
 <body>
-<header><div class="brand">ATOM <span>WORKBENCH</span></div><button id="addCard">＋ 新建卡片</button></header>
-<main><section class="hero"><p class="eyebrow">PERSONAL AI WORKSPACE</p><h1>把你的设备，<br>变成智能工作台。</h1><p>跨设备入口 · AI 助手 · 快捷工作流</p><div class="actions"><button id="voiceBtn">🎙 语音输入</button><button class="secondary" id="newTask">＋ 新任务</button></div></section>
-<section><div class="section-title"><h2>我的工作台</h2><span id="count">0 个卡片</span></div><div id="cards" class="cards"></div></section>
-</main><footer>ATOM Workbench · Prototype</footer><script src="./app.js"></script>
+<header><div class="brand">ATOM <span>WORKBENCH</span></div><div class="header-actions"><span class="mode-pill">本地工作模式</span><button id="addCard">＋ 新建卡片</button></div></header>
+<main>
+<section class="hero"><p class="eyebrow">PERSONAL AI WORKSPACE</p><h1>把你的设备，<br>变成智能工作台。</h1><p>跨设备入口 · 语音交互 · 快捷工作流</p><div class="actions"><button id="voiceBtn">🎙 语音输入</button><button class="secondary" id="newTask">＋ 新任务</button></div></section>
+<section class="assistant-panel" aria-labelledby="assistantTitle">
+  <div class="panel-heading"><div><p class="eyebrow">ATOM ASSISTANT</p><h2 id="assistantTitle">工作台助手</h2></div><span class="local-badge">离线可用 · 本地指令</span></div>
+  <div id="chatLog" class="chat-log" aria-live="polite"><div class="chat-message assistant-message"><strong>ATOM</strong><p>你好！我现在可以在本机帮你创建任务、搜索卡片和整理工作台。试试输入“添加任务：整理今天的工作”。</p></div></div>
+  <form id="assistantForm" class="assistant-form">
+    <label class="sr-only" for="assistantInput">输入任务或指令</label>
+    <textarea id="assistantInput" rows="2" placeholder="输入指令，例如：添加任务：联系供应商" required></textarea>
+    <div class="assistant-controls"><span>目前为本地指令原型，尚未连接云端大模型</span><button type="submit">发送</button></div>
+  </form>
+</section>
+<section><div class="section-title"><h2>我的工作台</h2><div class="list-tools"><input id="cardSearch" type="search" placeholder="搜索卡片…" aria-label="搜索卡片"><span id="count">0 个卡片</span></div></div><div id="cards" class="cards"></div><p id="emptyState" class="empty-state">还没有卡片。可以新建任务，或让 ATOM 助手帮你创建。</p></section>
+</main><footer>ATOM Workbench · Prototype · 数据保存在当前设备</footer><script src="./app.js"></script>
 </body></html>

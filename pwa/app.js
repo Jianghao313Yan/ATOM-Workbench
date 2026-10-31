@@ -73,4 +73,25 @@ document.querySelector("#voiceBtn").onclick=()=>{
   recognition.start();
 };
 if("serviceWorker"in navigator)navigator.serviceWorker.register("./service-worker.js").catch(()=>{});
+
+document.querySelector("#exportBackup").onclick=()=>{
+  const payload={format:"atom-workbench-backup",version:1,exportedAt:new Date().toISOString(),cards};
+  const blob=new Blob([JSON.stringify(payload,null,2)],{type:"application/json"});
+  const url=URL.createObjectURL(blob);const link=document.createElement("a");link.href=url;link.download="atom-workbench-backup.json";link.click();URL.revokeObjectURL(url);
+  appendMessage("assistant","备份文件已生成。你可以把它传到另一台设备，再选择“导入备份”。");
+};
+document.querySelector("#importBackup").onclick=()=>document.querySelector("#backupFile").click();
+document.querySelector("#backupFile").addEventListener("change",async event=>{
+  const file=event.target.files?.[0];if(!file)return;
+  try{
+    const parsed=JSON.parse(await file.text());
+    if(parsed.format!=="atom-workbench-backup"||!Array.isArray(parsed.cards))throw new Error("invalid backup");
+    const imported=parsed.cards.filter(c=>c&&typeof c.title==="string"&&typeof c.body==="string").map(c=>({id:makeId(),title:c.title.slice(0,160),body:c.body.slice(0,5000),createdAt:c.createdAt||new Date().toISOString()}));
+    if(!imported.length)throw new Error("empty backup");
+    if(!confirm("备份中有 "+imported.length+" 张卡片。选择“确定”将它们导入到现有卡片前面，不会删除当前内容。"))return;
+    cards=[...imported,...cards];save();appendMessage("assistant","已导入 "+imported.length+" 张卡片。");
+  }catch{alert("无法读取备份文件。请确认它是 ATOM Workbench 导出的 JSON 文件。")}
+  finally{event.target.value=""}
+});
+
 showHistory();render();

@@ -48,6 +48,20 @@ function showHistory(){
   chat.forEach(m=>{const wrap=document.createElement("div");wrap.className="chat-message "+(m.role==="user"?"user-message":"assistant-message");const label=document.createElement("strong");label.textContent=m.role==="user"?"你":"ATOM";const p=document.createElement("p");p.textContent=m.text;wrap.append(label,p);chatLog.append(wrap)});
   if(chat.length)chatLog.scrollTop=chatLog.scrollHeight;
 }
+async function askCloudAssistant(message){
+  appendMessage("assistant","正在请求云端 AI…");
+  const placeholder=chatLog.lastElementChild;
+  try{
+    const history=chat.slice(-9).map(item=>({role:item.role==="user"?"user":"assistant",content:item.text.slice(0,1500)}));
+    const {data,error}=await cloudClient.functions.invoke("atom-assistant",{body:{message:message.slice(0,4000),history}});
+    if(error)throw error;
+    if(!data?.reply)throw new Error("云端没有返回文本");
+    if(placeholder?.isConnected){placeholder.querySelector("p").textContent=data.reply;const last=chat[chat.length-1];if(last?.role==="assistant")last.text=data.reply;localStorage.setItem("atom-chat",JSON.stringify(chat))}
+  }catch(error){
+    const messageText="云端 AI 暂时不可用："+(error.message||"请检查 Edge Function 是否已部署，以及 OPENAI_API_KEY 是否已设置。");
+    if(placeholder?.isConnected){placeholder.querySelector("p").textContent=messageText;const last=chat[chat.length-1];if(last?.role==="assistant")last.text=messageText;localStorage.setItem("atom-chat",JSON.stringify(chat))}
+  }
+}
 function handleCommand(raw){
   const text=raw.trim();if(!text)return;
   appendMessage("user",text);
@@ -58,7 +72,8 @@ function handleCommand(raw){
   if(searchMatch){searchTerm=searchMatch[1].trim().toLowerCase();document.querySelector("#cardSearch").value=searchMatch[1].trim();render();appendMessage("assistant",searchTerm?"已筛选包含“"+searchMatch[1].trim()+"”的卡片。":"请输入要搜索的内容。");return}
   if(/^(?:清除搜索|显示全部|取消筛选)$/i.test(text)){searchTerm="";document.querySelector("#cardSearch").value="";render();appendMessage("assistant","已显示全部卡片。");return}
   if(/^(?:帮助|你会什么|指令)$/i.test(text)){appendMessage("assistant","当前本地可用指令：\n• 添加任务：任务名称\n• 搜索：关键词\n• 总结（列出所有卡片）\n• 显示全部（清除搜索）\n\n我还没有连接云端大模型，因此暂时不能进行开放式问答或自动操作其他应用。");return}
-  appendMessage("assistant","我目前运行在本地指令模式，暂时不能像云端大模型一样理解所有自然语言。你可以输入“添加任务：…”，“搜索：…”或“总结”。");
+  if(cloudClient&&cloudUser){void askCloudAssistant(text);return}
+  appendMessage("assistant","当前尚未登录云端 AI。你可以先使用“添加任务：…”，“搜索：…”或“总结”；完成云端设置并登录后，就能把开放式问题交给 AI。");
 }
 document.querySelector("#addCard").onclick=()=>{const title=prompt("卡片标题","新工作卡片");if(title)add(title.trim()||"新工作卡片","点击编辑你的工作内容。")};
 document.querySelector("#newTask").onclick=()=>{const t=prompt("任务名称");if(t)add(t,"待处理任务")};

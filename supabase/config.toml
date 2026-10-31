@@ -1,0 +1,4 @@
+project_id = "replace-with-your-supabase-project-ref"
+
+[functions.atom-assistant]
+verify_jwt = true

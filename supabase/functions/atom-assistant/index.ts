@@ -19,13 +19,17 @@ Deno.serve(async (req: Request) => {
   const supabaseUrl = Deno.env.get("SUPABASE_URL");
   const anonKey = Deno.env.get("SUPABASE_ANON_KEY") || Deno.env.get("SUPABASE_PUBLISHABLE_KEY");
   const openaiKey = Deno.env.get("OPENAI_API_KEY");
+  const allowedEmail = (Deno.env.get("ATOM_ALLOWED_EMAIL") || "").trim().toLowerCase();
   const model = Deno.env.get("OPENAI_MODEL") || "gpt-6-astra";
-  if (!supabaseUrl || !anonKey || !openaiKey) return json({ error: "Server configuration is incomplete" }, 503);
+  if (!supabaseUrl || !anonKey || !openaiKey || !allowedEmail) return json({ error: "Server configuration is incomplete" }, 503);
   // Validate the caller's access token with Supabase Auth; never trust a user_id supplied by the browser.
   const authResponse = await fetch(new URL("/auth/v1/user", supabaseUrl), {
     headers: { apikey: anonKey, Authorization: auth },
   });
   if (!authResponse.ok) return json({ error: "Invalid or expired session" }, 401);
+  const authenticatedUser = await authResponse.json().catch(() => null);
+  if (!authenticatedUser?.email || authenticatedUser.email.toLowerCase() !== allowedEmail) return json({ error: "This ATOM assistant is restricted to its owner account" }, 403);
+  if (!authenticatedUser.email_confirmed_at) return json({ error: "Please verify your account email first" }, 403);
   const body = await req.json().catch(() => null);
   if (!body || typeof body.message !== "string") return json({ error: "A message is required" }, 400);
   const message = body.message.trim().slice(0, 4000);

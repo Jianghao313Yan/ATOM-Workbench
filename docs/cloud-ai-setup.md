@@ -9,12 +9,12 @@ The repository includes an authenticated Supabase Edge Function at `supabase/fun
 
 ## Deploy using GitHub Actions (phone-friendly)
 1. In Supabase Dashboard, create/open your project and copy its project reference from the project URL.
-2. In Supabase Dashboard → Project Settings → Edge Functions / Secrets, add `OPENAI_API_KEY`. Optionally add `OPENAI_MODEL`.
+2. In Supabase Dashboard → Edge Functions → Secrets, add `OPENAI_API_KEY` and `ATOM_ALLOWED_EMAIL` (the exact email address you will use to register ATOM). Optionally add `OPENAI_MODEL`. The function rejects all other accounts, even if they can sign up.
 3. In GitHub repository Settings → Secrets and variables → Actions, add:
    - `SUPABASE_ACCESS_TOKEN`: a Supabase personal access token.
    - `SUPABASE_PROJECT_REF`: your project reference.
 4. Run the workflow **Deploy Supabase Assistant** from the GitHub Actions page, or push a change under `supabase/functions/`.
-5. The workflow deploys only the `atom-assistant` function. The function requires a valid Supabase user JWT; do not disable JWT verification.
+5. The workflow deploys only the `atom-assistant` function. The function requires a valid Supabase user JWT, a verified email, and a match with `ATOM_ALLOWED_EMAIL`; do not disable JWT verification.
 6. Open ATOM, configure the same Supabase Project URL and anon/public key, register/login, then send a normal question in the assistant panel.
 
 ## What is sent to the AI
@@ -26,4 +26,4 @@ When signed in and the function is deployed, the current message and up to eight
 - The browser receives only the public anon/publishable key and a user's own short-lived session.
 
 ## Current boundaries
-The AI function is a text assistant only. It does not run tools, manipulate other apps, access the device filesystem, or execute tasks autonomously. No rate-limit or per-user usage quota is configured yet; monitor API usage and set provider spending limits before broad use.
+The AI function is a text assistant only. It does not run tools, manipulate other apps, access the device filesystem, or execute tasks autonomously. The function is restricted to the single configured owner email. It does not yet include a robust distributed rate limiter; set OpenAI project spending limits and monitor usage.

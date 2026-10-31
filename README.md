@@ -11,6 +11,9 @@ A phone-first personal workspace prototype for foldable devices, initially targe
 - Android WebView wrapper and preliminary HarmonyOS ArkTS entry source.
 
 ## Enable cloud transfer
+
+For the optional AI chat backend, see [Cloud AI setup](docs/cloud-ai-setup.md).
+
 1. Create a Supabase project at https://supabase.com/ (free tier may be sufficient for initial testing).
 2. Open Supabase Dashboard → SQL Editor and run the complete script in `supabase/atom-workspaces.sql`.
 3. Open Project Settings → API and copy the Project URL and anon/public (or publishable) client key. Never use the `service_role` secret key.
@@ -21,7 +24,7 @@ A phone-first personal workspace prototype for foldable devices, initially targe
 The cloud controls currently provide explicit manual upload and restore, not background or real-time synchronization. Local cards and chat history remain on each device unless cards are uploaded. The Supabase client key is a public client key; access is restricted by database RLS so authenticated users can access only their own row.
 
 ## Important limitations
-This is an early prototype, not a complete recreation of vivo Atomic Workbench. The assistant is a local command parser, not an LLM. It cannot answer open-ended questions or control other apps. No AI model/backend, automatic conflict-aware sync, native system-level drag-and-drop, background agents, or OS-level automation are implemented. Android and HarmonyOS compatibility must be tested on the actual devices. The Android wrapper requires the PWA URL to be deployed first. The HarmonyOS source is not yet a complete buildable HAP project.
+This is an early prototype, not a complete recreation of vivo Atomic Workbench. The optional AI Edge Function source is included but is not deployed or configured automatically; open-ended AI chat remains unavailable until the owner completes [the cloud AI setup](docs/cloud-ai-setup.md). Cloud card transfer is manual, with no automatic conflict-aware sync. Native system-level drag-and-drop, background agents, and OS-level automation are not implemented. Android and HarmonyOS compatibility must be tested on the actual devices. The Android wrapper requires the PWA URL to be deployed first. The HarmonyOS source is not yet a complete buildable HAP project.
 
 ## Deploy and build
 1. In repository Settings → Pages, select **GitHub Actions** as the source.

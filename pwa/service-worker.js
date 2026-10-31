@@ -1,4 +1,4 @@
-const CACHE="atom-workbench-v3";
+const CACHE="atom-workbench-v4";
 const ASSETS=["./","./index.html","./styles.css","./app.js","./manifest.json","./icons/atom.svg"];
 self.addEventListener("install",event=>{
   event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(ASSETS)));

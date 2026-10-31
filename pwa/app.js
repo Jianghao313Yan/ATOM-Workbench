@@ -52,7 +52,7 @@ async function askCloudAssistant(message){
   appendMessage("assistant","正在请求云端 AI…");
   const placeholder=chatLog.lastElementChild;
   try{
-    const history=chat.slice(-9).map(item=>({role:item.role==="user"?"user":"assistant",content:item.text.slice(0,1500)}));
+    const history=chat.slice(-10,-2).map(item=>({role:item.role==="user"?"user":"assistant",content:item.text.slice(0,1500)}));
     const {data,error}=await cloudClient.functions.invoke("atom-assistant",{body:{message:message.slice(0,4000),history}});
     if(error)throw error;
     if(!data?.reply)throw new Error("云端没有返回文本");

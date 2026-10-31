@@ -8,7 +8,8 @@ A phone-first personal workspace prototype for foldable devices, initially targe
 - Local command assistant for adding tasks, searching cards and listing the workspace. Once the optional authenticated Edge Function is deployed and the OpenAI server secret is configured, free-form messages can be sent to the OpenAI Responses API.
 - JSON backup export/import for manual transfer.
 - Optional Supabase email/password account and **manual** per-account cloud upload/restore, protected by row-level security (RLS).
-- Android WebView wrapper and preliminary HarmonyOS ArkTS entry source.
+- Android WebView app (version 0.2.0) with foldable resizing, safe HTTPS navigation, offline/network-error recovery screen, progress indicator, back navigation, and user-approved microphone permission for voice features.
+- Preliminary HarmonyOS ArkTS entry source (deferred; Android is the current priority).
 
 ## Enable cloud transfer
 
@@ -24,7 +25,7 @@ For the optional AI chat backend, see [Cloud AI setup](docs/cloud-ai-setup.md).
 The cloud controls currently provide explicit manual upload and restore, not background or real-time synchronization. Local cards and chat history remain on each device unless cards are uploaded. The Supabase client key is a public client key; access is restricted by database RLS so authenticated users can access only their own row.
 
 ## Important limitations
-This is an early prototype, not a complete recreation of vivo Atomic Workbench. The optional AI Edge Function source is included but is not deployed or configured automatically; open-ended AI chat remains unavailable until the owner completes [the cloud AI setup](docs/cloud-ai-setup.md). Cloud card transfer is manual, with no automatic conflict-aware sync. Native system-level drag-and-drop, background agents, and OS-level automation are not implemented. Android and HarmonyOS compatibility must be tested on the actual devices. The Android wrapper requires the PWA URL to be deployed first. The HarmonyOS source is not yet a complete buildable HAP project.
+This is an early prototype, not a complete recreation of vivo Atomic Workbench. The optional AI Edge Function source is included but is not deployed or configured automatically; open-ended AI chat remains unavailable until the owner completes [the cloud AI setup](docs/cloud-ai-setup.md). Cloud card transfer is manual, with no automatic conflict-aware sync. Native system-level drag-and-drop, background agents, and OS-level automation are not implemented. Android compatibility still needs real-device testing on the target foldables. HarmonyOS work is intentionally deferred. The Android wrapper requires the PWA URL to be deployed first. The HarmonyOS source is not yet a complete buildable HAP project.
 
 ## Deploy and build
 1. In repository Settings → Pages, select **GitHub Actions** as the source.
